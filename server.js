@@ -42,7 +42,7 @@ const imagekit = new ImageKit({
   privateKey: process.env.IMAGEKIT_PRIVATE_KEY
 });
 
-
+//listo a deploy
 // ==========================================
 // SUBIR IMAGEN A IMAGEKIT
 // ==========================================
