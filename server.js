@@ -10,26 +10,6 @@ const { toFile } = require('@imagekit/nodejs');
 require('dotenv').config();
 
 
-// ==========================================
-// CLOUDINARY
-// ==========================================
-
-const { v2: cloudinary } = require('cloudinary');
-
-
-
-
-// ==========================================
-// CUENTA CLOUDINARY ESCRITORIO / NUEVA
-// ==========================================
-
-const cloudinaryEscritorio = require('cloudinary').v2;
-
-cloudinaryEscritorio.config({
-  cloud_name: process.env.CLOUDINARY_ESCRITORIO_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_ESCRITORIO_API_KEY,
-  api_secret: process.env.CLOUDINARY_ESCRITORIO_API_SECRET
-});
 
 //********************************************************************************* */
 // ==========================================
@@ -71,12 +51,7 @@ async function subirImagenImageKit(imagen, carpeta = 'general', nombreArchivo) {
 
 //****************************************************** */
 
-async function subirImagenCloudinaryEscritorio(imagen, opciones) {
-  return await cloudinaryEscritorio.uploader.upload(
-    imagen,
-    opciones
-  );
-}
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1204,159 +1179,172 @@ Nombre: ${nombre}
 
 
 //Update personaje OK!
+// Update personaje OK!
 app.put('/update-personajeWPF/:id', async (req, res) => {
-  const idpersonaje = req.params.id;
+    const idpersonaje = req.params.id;
 
-  let {
-    nombre, dominio, raza, naturaleza, edad, ken, ki, destino, pDestino,
-    fuerza, fortaleza, destreza, agilidad, sabiduria, presencia, principio,
-    sentidos, academisismo, alerta, atletismo, conBakemono, mentir, pilotear,
-    artesMarciales, medicina, conObjMagicos, sigilo, conEsferas, conLeyendas,
-    forja, conDemonio, conEspiritual, manejoBlaster, manejoSombras, tratoBakemono,
-    conHechiceria, medVital, medEspiritual, rayo, fuego, frio, veneno, corte,
-    energia, ventajas, apCombate, valCombate, apCombate2, valCombate2,
-    add1, valAdd1, add2, valAdd2, add3, valAdd3, add4, valAdd4,
-    imagen, imagenurl, inventario, dominios, kenActual, kiActual,
-    positiva, negativa, vidaActual, hechizos, consumision, iniciativa,
-    historia, usuarioId, tecEspecial, conviccion, cicatriz, resistencia, imagenSeleccionada, pjPnj, notas,marca
-  } = req.body;
+    let {
+        nombre, dominio, raza, naturaleza, edad, ken, ki, destino, pDestino,
+        fuerza, fortaleza, destreza, agilidad, sabiduria, presencia, principio,
+        sentidos, academisismo, alerta, atletismo, conBakemono, mentir, pilotear,
+        artesMarciales, medicina, conObjMagicos, sigilo, conEsferas, conLeyendas,
+        forja, conDemonio, conEspiritual, manejoBlaster, manejoSombras, tratoBakemono,
+        conHechiceria, medVital, medEspiritual, rayo, fuego, frio, veneno, corte,
+        energia, ventajas, apCombate, valCombate, apCombate2, valCombate2,
+        add1, valAdd1, add2, valAdd2, add3, valAdd3, add4, valAdd4,
+        imagen, imagenurl, inventario, dominios, kenActual, kiActual,
+        positiva, negativa, vidaActual, hechizos, consumision, iniciativa,
+        historia, usuarioId, tecEspecial, conviccion, cicatriz, resistencia,
+        imagenSeleccionada, pjPnj, notas, marca
+    } = req.body;
 
-  resistencia = resistencia === null || resistencia === undefined || resistencia === ""
-    ? 0
-    : resistencia;
+    resistencia = resistencia === null || resistencia === undefined || resistencia === ""
+        ? 0
+        : resistencia;
 
- console.log("=================================");
-  console.log("ACTUALIZANDO PERSONAJE");
-  console.log("ID personaje:", idpersonaje);
-  console.log("Nombre:", nombre);
-  console.log("=================================");
+    console.log("=================================");
+    console.log("ACTUALIZANDO PERSONAJE");
+    console.log("ID personaje:", idpersonaje);
+    console.log("Nombre:", nombre);
+    console.log("=================================");
 
-  console.log("Imagen selecionada en el backend: ", imagenSeleccionada)
-  try {
-    let imagencloudid = null; // solo se usa si subimos a Cloudinary
+    console.log("Imagen seleccionada en el backend:", imagenSeleccionada);
 
-    // Si envían base64, lo subimos a Cloudinary y reemplazamos imagenurl
-    if (imagen && imagen.startsWith('data:image/')) {
-      const matches = imagen.match(/^data:image\/(\w+);base64,(.+)$/);
-      if (!matches) return res.status(400).json({ error: 'Imagen base64 inválida.' });
+    try {
 
-      const ext = matches[1];
-      const data = matches[2];
+        let imagencloudid = null;
 
-      const uploadResult = await cloudinary.uploader.upload(`data:image/${ext};base64,${data}`, {
-        folder: 'personajes',
-        public_id: `personaje_${idpersonaje}`,
-        overwrite: true,
-      });
+        // SUBIR IMAGEN A IMAGEKIT
+        if (imagen && imagen.startsWith('data:image/')) {
 
-      imagenurl = uploadResult.secure_url;      // reemplaza la URL que venga del frontend
-      imagencloudid = uploadResult.public_id;
+            const matches = imagen.match(/^data:image\/(\w+);base64,(.+)$/);
+
+            if (!matches) {
+                return res.status(400).json({
+                    error: 'Imagen base64 inválida.'
+                });
+            }
+
+            const ext = matches[1];
+
+            const nombreArchivo = `personaje_${idpersonaje}.${ext}`;
+
+            const resultadoImagen = await subirImagenImageKit(
+                imagen,
+                'personajes',
+                nombreArchivo
+            );
+
+            imagenurl = resultadoImagen.imagenurl;
+            imagencloudid = resultadoImagen.imagencloudid;
+        }
+
+        // UPDATE COMPLETO
+        const query = `
+            UPDATE personajes SET
+                nombre=$1, dominio=$2, raza=$3, naturaleza=$4, edad=$5,
+                ken=$6, ki=$7, destino=$8, "pDestino"=$9, fuerza=$10,
+                fortaleza=$11, destreza=$12, agilidad=$13, sabiduria=$14,
+                presencia=$15, principio=$16, sentidos=$17, academisismo=$18,
+                alerta=$19, atletismo=$20, "conBakemono"=$21, mentir=$22, pilotear=$23,
+                "artesMarciales"=$24, medicina=$25, "conObjMagicos"=$26, sigilo=$27,
+                "conEsferas"=$28, "conLeyendas"=$29, forja=$30, "conDemonio"=$31,
+                "conEspiritual"=$32, "manejoBlaster"=$33, "manejoSombras"=$34,
+                "tratoBakemono"=$35, "conHechiceria"=$36, "medVital"=$37, "medEspiritual"=$38,
+                rayo=$39, fuego=$40, frio=$41, veneno=$42, corte=$43, energia=$44, ventajas=$45,
+                "apCombate"=$46, "valCombate"=$47, "apCombate2"=$48, "valCombate2"=$49,
+                add1=$50, "valAdd1"=$51, add2=$52, "valAdd2"=$53, add3=$54, "valAdd3"=$55,
+                add4=$56, "valAdd4"=$57, inventario=$58, dominios=$59, "kenActual"=$60,
+                "kiActual"=$61, positiva=$62, negativa=$63, "vidaActual"=$64,
+                hechizos=$65, consumision=$66, iniciativa=$67, historia=$68,
+                "usuarioId"=$69, "tecEspecial"=$70, conviccion=$71, cicatriz=$72,
+                resistencia=$73, "pjPnj"=$74, imagenurl=$75,
+                "imagenSeleccionada"=$76, notas=$77, marca=$78
+            WHERE idpersonaje=$79
+        `;
+
+        const values = [
+            nombre, dominio, raza, naturaleza, edad, ken, ki, destino, pDestino,
+            fuerza, fortaleza, destreza, agilidad, sabiduria, presencia, principio,
+            sentidos, academisismo, alerta, atletismo, conBakemono, mentir, pilotear,
+            artesMarciales, medicina, conObjMagicos, sigilo, conEsferas, conLeyendas,
+            forja, conDemonio, conEspiritual, manejoBlaster, manejoSombras, tratoBakemono,
+            conHechiceria, medVital, medEspiritual, rayo, fuego, frio, veneno, corte,
+            energia, ventajas, apCombate, valCombate, apCombate2, valCombate2,
+            add1, valAdd1, add2, valAdd2, add3, valAdd3, add4, valAdd4,
+            inventario, dominios, kenActual, kiActual, positiva, negativa, vidaActual,
+            hechizos, consumision, iniciativa, historia, usuarioId,
+            tecEspecial, conviccion, cicatriz, resistencia, pjPnj,
+            imagenurl, imagenSeleccionada, notas, marca, idpersonaje
+        ];
+
+        // DIAGNÓSTICO DE CAMPOS VACÍOS
+        const nombresCampos = [
+            "nombre", "dominio", "raza", "naturaleza", "edad",
+            "ken", "ki", "destino", "pDestino", "fuerza",
+            "fortaleza", "destreza", "agilidad", "sabiduria",
+            "presencia", "principio", "sentidos", "academisismo",
+            "alerta", "atletismo", "conBakemono", "mentir",
+            "pilotear", "artesMarciales", "medicina",
+            "conObjMagicos", "sigilo", "conEsferas",
+            "conLeyendas", "forja", "conDemonio",
+            "conEspiritual", "manejoBlaster",
+            "manejoSombras", "tratoBakemono",
+            "conHechiceria", "medVital", "medEspiritual",
+            "rayo", "fuego", "frio", "veneno", "corte",
+            "energia", "ventajas", "apCombate",
+            "valCombate", "apCombate2", "valCombate2",
+            "add1", "valAdd1", "add2", "valAdd2",
+            "add3", "valAdd3", "add4", "valAdd4",
+            "inventario", "dominios", "kenActual",
+            "kiActual", "positiva", "negativa",
+            "vidaActual", "hechizos", "consumision",
+            "iniciativa", "historia", "usuarioId",
+            "tecEspecial", "conviccion", "cicatriz",
+            "resistencia", "pjPnj", "imagenurl",
+            "imagenSeleccionada", "notas", "marca", "idpersonaje"
+        ];
+
+        values.forEach((valor, index) => {
+            if (valor === "") {
+                console.log("=================================");
+                console.log("CAMPO VACÍO DETECTADO:");
+                console.log("Campo:", nombresCampos[index]);
+                console.log("Posición SQL:", index + 1);
+                console.log("=================================");
+            }
+        });
+
+        await pool.query(query, values);
+
+        res.status(201).json({
+            message: 'Personaje modificado exitosamente.',
+            idpersonaje,
+            imagenurl,
+            imagencloudid
+        });
+
+    } catch (err) {
+
+        console.error("=================================");
+        console.error("ERROR AL ACTUALIZAR PERSONAJE");
+        console.error("ID personaje:", idpersonaje);
+        console.error("Mensaje:", err.message);
+        console.error("Código PostgreSQL:", err.code);
+        console.error("Detalle:", err.detail);
+        console.error("Dónde:", err.where);
+        console.error("Tabla:", err.table);
+        console.error("Columna:", err.column);
+        console.error("Restricción:", err.constraint);
+        console.error("Stack completo:", err.stack);
+        console.error("=================================");
+
+        res.status(500).json({
+            error: err.message,
+            code: err.code,
+            detail: err.detail
+        });
     }
-
-    // UPDATE completo incluyendo imagenurl
-    const query = `
-      UPDATE personajes SET
-        nombre=$1, dominio=$2, raza=$3, naturaleza=$4, edad=$5,
-        ken=$6, ki=$7, destino=$8, "pDestino"=$9, fuerza=$10,
-        fortaleza=$11, destreza=$12, agilidad=$13, sabiduria=$14,
-        presencia=$15, principio=$16, sentidos=$17, academisismo=$18,
-        alerta=$19, atletismo=$20, "conBakemono"=$21, mentir=$22, pilotear=$23,
-        "artesMarciales"=$24, medicina=$25, "conObjMagicos"=$26, sigilo=$27,
-        "conEsferas"=$28, "conLeyendas"=$29, forja=$30, "conDemonio"=$31,
-        "conEspiritual"=$32, "manejoBlaster"=$33, "manejoSombras"=$34,
-        "tratoBakemono"=$35, "conHechiceria"=$36, "medVital"=$37, "medEspiritual"=$38,
-        rayo=$39, fuego=$40, frio=$41, veneno=$42, corte=$43, energia=$44, ventajas=$45,
-        "apCombate"=$46, "valCombate"=$47, "apCombate2"=$48, "valCombate2"=$49,
-        add1=$50, "valAdd1"=$51, add2=$52, "valAdd2"=$53, add3=$54, "valAdd3"=$55,
-        add4=$56, "valAdd4"=$57, inventario=$58, dominios=$59, "kenActual"=$60,
-        "kiActual"=$61, positiva=$62, negativa=$63, "vidaActual"=$64,
-        hechizos=$65, consumision=$66, iniciativa=$67, historia=$68,
-        "usuarioId"=$69, "tecEspecial"=$70, conviccion=$71, cicatriz=$72,
-        resistencia=$73, "pjPnj"=$74, imagenurl=$75, "imagenSeleccionada"=$76 , notas=$77, marca=$78
-      WHERE idpersonaje=$79
-    `;
-
-    const values = [
-      nombre, dominio, raza, naturaleza, edad, ken, ki, destino, pDestino,
-      fuerza, fortaleza, destreza, agilidad, sabiduria, presencia, principio,
-      sentidos, academisismo, alerta, atletismo, conBakemono, mentir, pilotear,
-      artesMarciales, medicina, conObjMagicos, sigilo, conEsferas, conLeyendas,
-      forja, conDemonio, conEspiritual, manejoBlaster, manejoSombras, tratoBakemono,
-      conHechiceria, medVital, medEspiritual, rayo, fuego, frio, veneno, corte,
-      energia, ventajas, apCombate, valCombate, apCombate2, valCombate2,
-      add1, valAdd1, add2, valAdd2, add3, valAdd3, add4, valAdd4,
-      inventario, dominios, kenActual, kiActual, positiva, negativa, vidaActual,
-      hechizos, consumision, iniciativa, historia, usuarioId,
-      tecEspecial, conviccion, cicatriz, resistencia, pjPnj, imagenurl,imagenSeleccionada, notas,marca, idpersonaje
-    ];
-
-
-
-    const nombresCampos = [
-  "nombre", "dominio", "raza", "naturaleza", "edad",
-  "ken", "ki", "destino", "pDestino", "fuerza",
-  "fortaleza", "destreza", "agilidad", "sabiduria",
-  "presencia", "principio", "sentidos", "academisismo",
-  "alerta", "atletismo", "conBakemono", "mentir",
-  "pilotear", "artesMarciales", "medicina",
-  "conObjMagicos", "sigilo", "conEsferas",
-  "conLeyendas", "forja", "conDemonio",
-  "conEspiritual", "manejoBlaster",
-  "manejoSombras", "tratoBakemono",
-  "conHechiceria", "medVital", "medEspiritual",
-  "rayo", "fuego", "frio", "veneno", "corte",
-  "energia", "ventajas", "apCombate",
-  "valCombate", "apCombate2", "valCombate2",
-  "add1", "valAdd1", "add2", "valAdd2",
-  "add3", "valAdd3", "add4", "valAdd4",
-  "inventario", "dominios", "kenActual",
-  "kiActual", "positiva", "negativa",
-  "vidaActual", "hechizos", "consumision",
-  "iniciativa", "historia", "usuarioId",
-  "tecEspecial", "conviccion", "cicatriz",
-  "resistencia", "pjPnj", "imagenurl",
-  "imagenSeleccionada", "notas", "marca", "idpersonaje"
-];
-
-values.forEach((valor, index) => {
-  if (valor === "") {
-    console.log("=================================");
-    console.log("CAMPO VACIO DETECTADO:");
-    console.log("Campo:", nombresCampos[index]);
-    console.log("Posicion SQL:", index + 1);
-    console.log("=================================");
-  }
-});
-
-    await pool.query(query, values);
-
-    res.status(201).json({
-      message: 'Personaje modificado exitosamente.',
-      idpersonaje,
-      imagenurl,
-      imagencloudid
-    });
-
-  } catch (err) {
-    console.error("=================================");
-    console.error("ERROR AL ACTUALIZAR PERSONAJE");
-    console.error("ID personaje:", idpersonaje);
-    console.error("Mensaje:", err.message);
-    console.error("Código PostgreSQL:", err.code);
-    console.error("Detalle:", err.detail);
-    console.error("Dónde:", err.where);
-    console.error("Tabla:", err.table);
-    console.error("Columna:", err.column);
-    console.error("Restricción:", err.constraint);
-    console.error("Stack completo:", err.stack);
-    console.error("=================================");
-
-    res.status(500).json({
-        error: err.message,
-        code: err.code,
-        detail: err.detail
-    });
-}
 });
 
 //OK!!
@@ -1425,239 +1413,327 @@ app.get('/consumirPersonajesRankingWPF', async (req, res) => {
 // SAGAS
 // INSERT SAGA OK ✅
 
+// INSERT SAGA
 app.post('/insert-saga', async (req, res) => {
-  const {
-    titulo,
-    presentacion,
-    imagensaga,
-    personajes,
-  } = req.body;
+    const {
+        titulo,
+        presentacion,
+        imagensaga,
+        personajes
+    } = req.body;
 
-  try {
-    // 1. Insertar saga base
-    const insertQuery = `
-      INSERT INTO sagas (titulo, presentacion, imagensaga, personajes)
-      VALUES ($1, $2, $3, $4)
-      RETURNING idsaga
-    `;
+    try {
 
-    const insertValues = [titulo, presentacion, imagensaga, personajes];
-    const insertResult = await pool.query(insertQuery, insertValues);
+        // 1. Insertar saga base
+        const insertQuery = `
+            INSERT INTO sagas (titulo, presentacion, imagensaga, personajes)
+            VALUES ($1, $2, $3, $4)
+            RETURNING idsaga
+        `;
 
-    const newSagaId = insertResult.rows[0].idsaga;
+        const insertValues = [titulo, presentacion, imagensaga, personajes];
 
-    // Imagen por defecto
-    let imagenUrl = "https://res.cloudinary.com/dzul1hatw/image/upload/v1774459888/imagenBase_whvcot.jpg";
-    let imagenCloudId = null;
+        const insertResult = await pool.query(insertQuery, insertValues);
 
-    // 2. Subir imagen a ImageKit
-    if (
-      imagensaga &&
-      typeof imagensaga === 'string' &&
-      imagensaga.startsWith('data:image/')
-    ) {
-      const matches = imagensaga.match(/^data:image\/(\w+);base64,(.+)$/);
+        const newSagaId = insertResult.rows[0].idsaga;
 
-      if (matches) {
-        const ext = matches[1];
-        const data = matches[2];
+        // Imagen por defecto
+        let imagenUrl = "https://res.cloudinary.com/dzul1hatw/image/upload/v1774459888/imagenBase_whvcot.jpg";
+        let imagenCloudId = null;
 
-        try {
-          const uploadResult = await imagekit.files.upload({
-            file: `data:image/${ext};base64,${data}`,
-            fileName: `saga_${newSagaId}.${ext}`,
-            folder: '/sagas',
-            useUniqueFileName: false
-          });
+        // 2. Subir imagen a ImageKit
+        if (
+            imagensaga &&
+            typeof imagensaga === 'string' &&
+            imagensaga.startsWith('data:image/')
+        ) {
 
-          imagenUrl = uploadResult.url;
-          imagenCloudId = uploadResult.fileId;
+            const matches = imagensaga.match(/^data:image\/(\w+);base64,(.+)$/);
 
-        } catch (uploadError) {
-          console.warn(
-            "Error subiendo a ImageKit, se usa imagen default:",
-            uploadError.message
-          );
+            if (matches) {
+
+                const ext = matches[1];
+
+                try {
+
+                    const resultadoImagen = await subirImagenImageKit(
+                        imagensaga,
+                        'sagas',
+                        `saga_${newSagaId}.${ext}`
+                    );
+
+                    imagenUrl = resultadoImagen.imagenurl;
+                    imagenCloudId = resultadoImagen.imagencloudid;
+
+                } catch (uploadError) {
+
+                    console.warn(
+                        "Error subiendo a ImageKit, se usa imagen default:",
+                        uploadError.message
+                    );
+                }
+
+            } else {
+                console.warn("Imagen base64 inválida, se usa imagen default");
+            }
         }
 
-      } else {
-        console.warn("Imagen base64 inválida, se usa imagen default");
-      }
+        // 3. Guardar imagen
+        await pool.query(
+            `UPDATE sagas
+             SET imagenurl = $1, imagencloudid = $2
+             WHERE idsaga = $3`,
+            [imagenUrl, imagenCloudId, newSagaId]
+        );
+
+        // 4. Respuesta
+        res.status(201).json({
+            message: 'Saga creada exitosamente.',
+            idsaga: newSagaId,
+            imagenurl: imagenUrl,
+            imagencloudid: imagenCloudId
+        });
+
+    } catch (error) {
+
+        console.error('Error al insertar la saga:', error);
+
+        res.status(500).json({
+            error: 'Error al insertar la saga.'
+        });
     }
-
-    // 3. Guardar imagen
-    await pool.query(
-      `UPDATE sagas SET imagenurl = $1, imagencloudid = $2 WHERE idsaga = $3`,
-      [imagenUrl, imagenCloudId, newSagaId]
-    );
-
-    // 4. Respuesta
-    res.status(201).json({
-      message: 'Saga creada exitosamente.',
-      idsaga: newSagaId,
-      imagenurl: imagenUrl,
-      imagencloudid: imagenCloudId,
-    });
-
-  } catch (error) {
-    console.error('Error al insertar la saga:', error);
-    res.status(500).json({ error: 'Error al insertar la saga.' });
-  }
 });
 
-
 //consmumir sagas ok!!
+// CONSUMIR SAGAS OK
 app.get('/consumirSagas', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT idsaga, titulo, presentacion, personajes, imagenurl, imagencloudid
-     FROM sagas ORDER BY idsaga DESC
-    `);
+    try {
 
-    res.status(200).json({ coleccionSagas: result.rows });
-  } catch (error) {
-    console.error('Error al obtener sagas:', error);
-    res.status(500).json({ error: 'Error interno al obtener sagas' });
-  }
+        const result = await pool.query(`
+            SELECT
+                idsaga,
+                titulo,
+                presentacion,
+                personajes,
+                imagenurl,
+                imagencloudid
+            FROM sagas
+            ORDER BY idsaga DESC
+        `);
+
+        res.status(200).json({
+            coleccionSagas: result.rows
+        });
+
+    } catch (error) {
+
+        console.error('Error al obtener sagas:', error);
+
+        res.status(500).json({
+            error: 'Error interno al obtener sagas'
+        });
+    }
 });
 
 //update sagas y secciones ok!!
 
+// UPDATE SAGAS Y SECCIONES
 app.put('/updateSagaCompleta/:idsaga', async (req, res) => {
-  const { idsaga } = req.params;
-  const { titulo, presentacion, imagensaga, secciones } = req.body;
 
-  if (!presentacion || !titulo) {
-    return res.status(400).json({ error: 'Título y presentación son requeridos' });
-  }
+    const { idsaga } = req.params;
 
-  try {
-    let imagenurl = null;
-    let imagenfileid = null;
+    const {
+        titulo,
+        presentacion,
+        imagensaga,
+        secciones
+    } = req.body;
 
-    // Actualizar imagen saga si viene base64
-    if (imagensaga && imagensaga.startsWith('data:image/')) {
-      const matches = imagensaga.match(/^data:image\/(\w+);base64,(.+)$/);
-
-      if (!matches) {
-        return res.status(400).json({ error: 'Formato de imagen base64 inválido para saga' });
-      }
-
-      const ext = matches[1];
-
-      const uploadResult = await imagekit.upload({
-        file: imagensaga,
-        fileName: `saga_${idsaga}.${ext}`,
-        folder: '/sagas',
-        useUniqueFileName: false,
-      });
-
-      imagenurl = uploadResult.url;
-      imagenfileid = uploadResult.fileId;
-
-      await pool.query(
-        'UPDATE sagas SET imagenurl = $1, imagenfileid = $2 WHERE idsaga = $3',
-        [imagenurl, imagenfileid, idsaga]
-      );
-    }
-
-    // Actualizar datos de la saga
-    const resultSaga = await pool.query(
-      'UPDATE sagas SET titulo = $1, presentacion = $2 WHERE idsaga = $3 RETURNING *',
-      [titulo, presentacion, idsaga]
-    );
-
-    if (resultSaga.rowCount === 0) {
-      return res.status(404).json({ error: 'Saga no encontrada' });
-    }
-
-    // Array para acumular las secciones guardadas
-    const seccionesActualizadas = [];
-
-    // Actualizar o insertar las secciones
-    if (Array.isArray(secciones)) {
-      for (const seccion of secciones) {
-        const { idseccion, titulo, presentacion, imagen } = seccion;
-
-        let idsec = idseccion;
-        let imagenurlSeccion = null;
-        let imagenfileidSeccion = null;
-
-        // Subir imagen de sección si es base64
-        if (imagen && imagen.startsWith('data:image/')) {
-          const matchesSeccion = imagen.match(/^data:image\/(\w+);base64,(.+)$/);
-
-          if (!matchesSeccion) {
-            return res.status(400).json({
-              error: `Formato de imagen base64 inválido para sección ${idseccion || 'nueva'}`
-            });
-          }
-
-          const ext = matchesSeccion[1];
-
-          const uploadResultSeccion = await imagekit.upload({
-            file: imagen,
-            fileName: idseccion
-              ? `seccion_${idseccion}.${ext}`
-              : `seccion_saga_${idsaga}_${Date.now()}.${ext}`,
-            folder: '/secciones',
-            useUniqueFileName: false,
-          });
-
-          imagenurlSeccion = uploadResultSeccion.url;
-          imagenfileidSeccion = uploadResultSeccion.fileId;
-        }
-
-        if (!idsec) {
-          // Nueva sección: insertar
-          const insertResult = await pool.query(
-            `INSERT INTO secciones (
-              idsaga, titulo, presentacion, imagenurl, imagenfileid
-            )
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING idseccion`,
-            [idsaga, titulo, presentacion, imagenurlSeccion, imagenfileidSeccion]
-          );
-
-          idsec = insertResult.rows[0].idseccion;
-
-        } else {
-          // Sección existente: actualizar
-          await pool.query(
-            `UPDATE secciones
-             SET titulo = $1,
-                 presentacion = $2,
-                 imagenurl = COALESCE($3, imagenurl),
-                 imagenfileid = COALESCE($4, imagenfileid)
-             WHERE idseccion = $5`,
-            [titulo, presentacion, imagenurlSeccion, imagenfileidSeccion, idsec]
-          );
-        }
-
-        seccionesActualizadas.push({
-          idseccion: idsec,
-          titulo,
-          presentacion,
-          imagenurl: imagenurlSeccion,
-          imagenfileid: imagenfileidSeccion,
+    if (!presentacion || !titulo) {
+        return res.status(400).json({
+            error: 'Título y presentación son requeridos'
         });
-      }
     }
 
-    res.json({
-      message: 'Saga y secciones actualizadas correctamente',
-      saga: resultSaga.rows[0],
-      imagenurl,
-      imagenfileid,
-      secciones: seccionesActualizadas,
-    });
+    try {
 
-  } catch (error) {
-    console.error('Error al actualizar saga y secciones:', error.message);
-    res.status(500).json({
-      error: 'Error interno al actualizar saga y secciones'
-    });
-  }
+        let imagenurl = null;
+        let imagencloudid = null;
+
+        // 1. ACTUALIZAR IMAGEN DE LA SAGA
+        if (
+            imagensaga &&
+            typeof imagensaga === 'string' &&
+            imagensaga.startsWith('data:image/')
+        ) {
+
+            const matches = imagensaga.match(/^data:image\/(\w+);base64,(.+)$/);
+
+            if (!matches) {
+                return res.status(400).json({
+                    error: 'Formato de imagen base64 inválido para saga'
+                });
+            }
+
+            const ext = matches[1];
+
+            const resultadoImagen = await subirImagenImageKit(
+                imagensaga,
+                'sagas',
+                `saga_${idsaga}.${ext}`
+            );
+
+            imagenurl = resultadoImagen.imagenurl;
+            imagencloudid = resultadoImagen.imagencloudid;
+
+            await pool.query(
+                `UPDATE sagas
+                 SET imagenurl = $1, imagencloudid = $2
+                 WHERE idsaga = $3`,
+                [imagenurl, imagencloudid, idsaga]
+            );
+        }
+
+        // 2. ACTUALIZAR DATOS DE LA SAGA
+        const resultSaga = await pool.query(
+            `UPDATE sagas
+             SET titulo = $1, presentacion = $2
+             WHERE idsaga = $3
+             RETURNING *`,
+            [titulo, presentacion, idsaga]
+        );
+
+        if (resultSaga.rowCount === 0) {
+            return res.status(404).json({
+                error: 'Saga no encontrada'
+            });
+        }
+
+        // 3. ARRAY PARA ACUMULAR SECCIONES
+        const seccionesActualizadas = [];
+
+        // 4. ACTUALIZAR O INSERTAR SECCIONES
+        if (Array.isArray(secciones)) {
+
+            for (const seccion of secciones) {
+
+                const {
+                    idseccion,
+                    titulo,
+                    presentacion,
+                    imagen
+                } = seccion;
+
+                let idsec = idseccion;
+
+                let imagenurlSeccion = null;
+                let imagenfileidSeccion = null;
+
+                // SUBIR IMAGEN DE SECCIÓN A IMAGEKIT
+                if (
+                    imagen &&
+                    typeof imagen === 'string' &&
+                    imagen.startsWith('data:image/')
+                ) {
+
+                    const matchesSeccion = imagen.match(
+                        /^data:image\/(\w+);base64,(.+)$/
+                    );
+
+                    if (!matchesSeccion) {
+                        return res.status(400).json({
+                            error: `Formato de imagen base64 inválido para sección ${idseccion || 'nueva'}`
+                        });
+                    }
+
+                    const ext = matchesSeccion[1];
+
+                    const nombreArchivo = idseccion
+                        ? `seccion_${idseccion}.${ext}`
+                        : `seccion_saga_${idsaga}_${Date.now()}.${ext}`;
+
+                    const resultadoImagenSeccion = await subirImagenImageKit(
+                        imagen,
+                        'secciones',
+                        nombreArchivo
+                    );
+
+                    imagenurlSeccion = resultadoImagenSeccion.imagenurl;
+                    imagenfileidSeccion = resultadoImagenSeccion.imagencloudid;
+                }
+
+                // 5. NUEVA SECCIÓN
+                if (!idsec) {
+
+                    const insertResult = await pool.query(
+                        `INSERT INTO secciones (
+                            idsaga,
+                            titulo,
+                            presentacion,
+                            imagenurl,
+                            imagenfileid
+                        )
+                        VALUES ($1, $2, $3, $4, $5)
+                        RETURNING idseccion`,
+                        [
+                            idsaga,
+                            titulo,
+                            presentacion,
+                            imagenurlSeccion,
+                            imagenfileidSeccion
+                        ]
+                    );
+
+                    idsec = insertResult.rows[0].idseccion;
+
+                } else {
+
+                    // 6. ACTUALIZAR SECCIÓN EXISTENTE
+                    await pool.query(
+                        `UPDATE secciones
+                         SET titulo = $1,
+                             presentacion = $2,
+                             imagenurl = COALESCE($3, imagenurl),
+                             imagenfileid = COALESCE($4, imagenfileid)
+                         WHERE idseccion = $5`,
+                        [
+                            titulo,
+                            presentacion,
+                            imagenurlSeccion,
+                            imagenfileidSeccion,
+                            idsec
+                        ]
+                    );
+                }
+
+                // 7. GUARDAR SECCIÓN ACTUALIZADA
+                seccionesActualizadas.push({
+                    idseccion: idsec,
+                    titulo,
+                    presentacion,
+                    imagenurl: imagenurlSeccion,
+                    imagenfileid: imagenfileidSeccion
+                });
+            }
+        }
+
+        // 8. RESPUESTA
+        res.json({
+            message: 'Saga y secciones actualizadas correctamente',
+            saga: resultSaga.rows[0],
+            imagenurl,
+            imagencloudid,
+            secciones: seccionesActualizadas
+        });
+
+    } catch (error) {
+
+        console.error('Error al actualizar saga y secciones:', error);
+
+        res.status(500).json({
+            error: 'Error interno al actualizar saga y secciones'
+        });
+    }
 });
 
 // Endpoint para agregar personaje a una saga
@@ -1782,91 +1858,121 @@ app.put('/personajes/:idpersonaje/notasaga', async (req, res) => {
 });
 
 
+// UPDATE USUARIOS
 app.put('/updateUsuarios/:usuarioId', async (req, res) => {
-  const usuarioId = req.params.usuarioId;
-  const { nick, email, contrasenia, imagenurl } = req.body;
 
-  if (!usuarioId) {
-    return res.status(400).json({ error: 'ID de usuario es obligatorio' });
-  }
+    const usuarioId = req.params.usuarioId;
+    const { nick, email, contrasenia, imagenurl } = req.body;
 
-  if (
-    typeof nick !== 'string' ||
-    typeof email !== 'string' ||
-    typeof contrasenia !== 'string'
-  ) {
-    return res.status(400).json({ error: 'Datos inválidos' });
-  }
-
-  let imagenUrlFinal = null;
-  let imagenFileIdFinal = null;
-
-  try {
-    // 1. Si la imagen viene en base64, subir a ImageKit
-    if (imagenurl && imagenurl.startsWith('data:image/')) {
-      const matches = imagenurl.match(/^data:image\/(\w+);base64,(.+)$/);
-
-      if (!matches) {
-        return res.status(400).json({ error: 'Imagen base64 inválida.' });
-      }
-
-      const ext = matches[1];
-
-      const uploadResult = await imagekit.upload({
-        file: imagenurl,
-        fileName: `usuario_${usuarioId}.${ext}`,
-        folder: '/usuarios',
-        useUniqueFileName: false,
-      });
-
-      imagenUrlFinal = uploadResult.url;
-      imagenFileIdFinal = uploadResult.fileId;
+    if (!usuarioId) {
+        return res.status(400).json({
+            error: 'ID de usuario es obligatorio'
+        });
     }
 
-    // 2. Armar consulta de actualización
-    let updateQuery = `
-      UPDATE usuarios
-      SET nick = $1,
-          email = $2,
-          contrasenia = $3
-    `;
-
-    const values = [nick, email, contrasenia];
-    let paramIndex = 4;
-
-    if (imagenUrlFinal && imagenFileIdFinal) {
-      updateQuery += `, imagenurl = $${paramIndex}, imagenfileid = $${paramIndex + 1}`;
-      values.push(imagenUrlFinal, imagenFileIdFinal);
-      paramIndex += 2;
+    if (
+        typeof nick !== 'string' ||
+        typeof email !== 'string' ||
+        typeof contrasenia !== 'string'
+    ) {
+        return res.status(400).json({
+            error: 'Datos inválidos'
+        });
     }
 
-    updateQuery += ` WHERE idusuario = $${paramIndex} RETURNING *`;
-    values.push(usuarioId);
+    let imagenUrlFinal = null;
+    let imagenFileIdFinal = null;
 
-    const result = await pool.query(updateQuery, values);
+    try {
 
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Usuario no encontrado' });
+        // 1. SUBIR IMAGEN A IMAGEKIT
+        if (
+            imagenurl &&
+            typeof imagenurl === 'string' &&
+            imagenurl.startsWith('data:image/')
+        ) {
+
+            const matches = imagenurl.match(/^data:image\/(\w+);base64,(.+)$/);
+
+            if (!matches) {
+                return res.status(400).json({
+                    error: 'Imagen base64 inválida.'
+                });
+            }
+
+            const ext = matches[1];
+
+            const resultadoImagen = await subirImagenImageKit(
+                imagenurl,
+                'usuarios',
+                `usuario_${usuarioId}.${ext}`
+            );
+
+            imagenUrlFinal = resultadoImagen.imagenurl;
+            imagenFileIdFinal = resultadoImagen.imagencloudid;
+        }
+
+        // 2. ARMAR CONSULTA DE ACTUALIZACIÓN
+        let updateQuery = `
+            UPDATE usuarios
+            SET nick = $1,
+                email = $2,
+                contrasenia = $3
+        `;
+
+        const values = [nick, email, contrasenia];
+
+        let paramIndex = 4;
+
+        if (imagenUrlFinal && imagenFileIdFinal) {
+
+            updateQuery += `,
+                imagenurl = $${paramIndex},
+                imagenfileid = $${paramIndex + 1}
+            `;
+
+            values.push(imagenUrlFinal, imagenFileIdFinal);
+
+            paramIndex += 2;
+        }
+
+        updateQuery += `
+            WHERE idusuario = $${paramIndex}
+            RETURNING *
+        `;
+
+        values.push(usuarioId);
+
+        // 3. EJECUTAR UPDATE
+        const result = await pool.query(updateQuery, values);
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({
+                error: 'Usuario no encontrado'
+            });
+        }
+
+        // 4. DEVOLVER DATOS ACTUALIZADOS
+        const usuarioActualizado = result.rows[0];
+
+        res.status(200).json({
+            mensaje: 'Usuario actualizado',
+            nick: usuarioActualizado.nick,
+            email: usuarioActualizado.email,
+            contrasenia: usuarioActualizado.contrasenia,
+            imagenurl: usuarioActualizado.imagenurl || "",
+            imagenfileid: usuarioActualizado.imagenfileid || ""
+        });
+
+    } catch (error) {
+
+        console.error('Error actualizando usuario:', error);
+
+        res.status(500).json({
+            error: 'Error del servidor'
+        });
     }
-
-    // 3. Devolver datos actualizados
-    const usuarioActualizado = result.rows[0];
-
-    res.status(200).json({
-      mensaje: 'Usuario actualizado',
-      nick: usuarioActualizado.nick,
-      email: usuarioActualizado.email,
-      contrasenia: usuarioActualizado.contrasenia,
-      imagenurl: usuarioActualizado.imagenurl || "",
-      imagenfileid: usuarioActualizado.imagenfileid || "",
-    });
-
-  } catch (error) {
-    console.error('Error actualizando usuario:', error);
-    res.status(500).json({ error: 'Error del servidor' });
-  }
 });
-
 
 
 
@@ -1874,108 +1980,118 @@ app.put('/updateUsuarios/:usuarioId', async (req, res) => {
 
 //*************************Sprite ***********************************
 
+// ******************** SPRITE ********************
+
 app.post("/upload-sprite", async (req, res) => {
-  const { idpersonaje, imagen, filas, columnas, fps, scalesize } = req.body;
 
-  try {
-    if (!idpersonaje) {
-      return res.status(400).json({ error: "idpersonaje requerido" });
+    const { idpersonaje, imagen, filas, columnas, fps, scalesize } = req.body;
+
+    try {
+
+        if (!idpersonaje) {
+            return res.status(400).json({
+                error: "idpersonaje requerido"
+            });
+        }
+
+        const f = Number(filas);
+        const c = Number(columnas);
+        const velocidad = Number(fps);
+        const scale = Number(scalesize) || 0.8;
+
+        if ([f, c, velocidad].some(v => Number.isNaN(v))) {
+            return res.status(400).json({
+                error: "Datos de animación inválidos"
+            });
+        }
+
+        let imageUrl = null;
+        let fileId = null;
+
+        // SOLO SI VIENE IMAGEN NUEVA
+        if (imagen) {
+
+            const matches = imagen.match(/^data:image\/(\w+);base64,(.+)$/);
+
+            if (!matches) {
+                return res.status(400).json({
+                    error: "Imagen base64 inválida"
+                });
+            }
+
+            const ext = matches[1];
+
+            // SUBIR A IMAGEKIT
+            const resultadoImagen = await subirImagenImageKit(
+                imagen,
+                'sprites',
+                `sprite_${idpersonaje}.${ext}`
+            );
+
+            imageUrl = resultadoImagen.imagenurl;
+            fileId = resultadoImagen.imagencloudid;
+        }
+
+        // UPSERT
+        const query = `
+            INSERT INTO animaciones (
+                idpersonaje,
+                spriteurl,
+                filas,
+                columnas,
+                fps,
+                scalesize,
+                public_id
+            )
+            VALUES (
+                $1,
+                COALESCE($2, (SELECT spriteurl FROM animaciones WHERE idpersonaje=$1)),
+                $3,
+                $4,
+                $5,
+                $6,
+                COALESCE($7, (SELECT public_id FROM animaciones WHERE idpersonaje=$1))
+            )
+            ON CONFLICT (idpersonaje)
+            DO UPDATE SET
+                spriteurl = COALESCE(EXCLUDED.spriteurl, animaciones.spriteurl),
+                filas = EXCLUDED.filas,
+                columnas = EXCLUDED.columnas,
+                fps = EXCLUDED.fps,
+                scalesize = EXCLUDED.scalesize,
+                public_id = COALESCE(EXCLUDED.public_id, animaciones.public_id)
+            RETURNING *;
+        `;
+
+        const result = await pool.query(query, [
+            idpersonaje,
+            imageUrl,
+            f,
+            c,
+            velocidad,
+            scale,
+            fileId
+        ]);
+
+        return res.status(200).json({
+            message: "Sprite actualizado correctamente",
+            animacion: result.rows[0]
+        });
+
+    } catch (err) {
+
+        console.error("Error upload sprite:", err);
+
+        return res.status(500).json({
+            error: "Error al subir sprite"
+        });
     }
-
-    const f = Number(filas);
-    const c = Number(columnas);
-    const velocidad = Number(fps);
-    const scale = Number(scalesize) || 0.8;
-
-    if ([f, c, velocidad].some(v => Number.isNaN(v))) {
-      return res.status(400).json({ error: "Datos de animación inválidos" });
-    }
-
-    let imageUrl = null;
-    let fileId = null;
-
-    // SOLO SI VIENE IMAGEN NUEVA
-    if (imagen) {
-      const matches = imagen.match(/^data:(image\/\w+);base64,(.+)$/);
-
-      if (!matches) {
-        return res.status(400).json({ error: "Imagen base64 inválida" });
-      }
-
-      const mimeType = matches[1];
-
-      // Subir imagen a ImageKit
-      const uploadResult = await imagekit.upload({
-        file: imagen,
-        fileName: `sprite_${idpersonaje}.${mimeType.split('/')[1]}`,
-        folder: "/sprites",
-        useUniqueFileName: false,
-      });
-
-      imageUrl = uploadResult.url;
-      fileId = uploadResult.fileId;
-    }
-
-    // UPSERT
-    const query = `
-      INSERT INTO animaciones (
-        idpersonaje,
-        spriteurl,
-        filas,
-        columnas,
-        fps,
-        scalesize,
-        public_id
-      )
-      VALUES (
-        $1,
-        COALESCE($2, (SELECT spriteurl FROM animaciones WHERE idpersonaje=$1)),
-        $3,
-        $4,
-        $5,
-        $6,
-        COALESCE($7, (SELECT public_id FROM animaciones WHERE idpersonaje=$1))
-      )
-      ON CONFLICT (idpersonaje)
-      DO UPDATE SET
-        spriteurl = COALESCE(EXCLUDED.spriteurl, animaciones.spriteurl),
-        filas = EXCLUDED.filas,
-        columnas = EXCLUDED.columnas,
-        fps = EXCLUDED.fps,
-        scalesize = EXCLUDED.scalesize,
-        public_id = COALESCE(EXCLUDED.public_id, animaciones.public_id)
-      RETURNING *;
-    `;
-
-    const result = await pool.query(query, [
-      idpersonaje,
-      imageUrl,
-      f,
-      c,
-      velocidad,
-      scale,
-      fileId,
-    ]);
-
-    return res.status(200).json({
-      message: "Sprite actualizado correctamente",
-      animacion: result.rows[0],
-    });
-
-  } catch (err) {
-    console.error("Error upload sprite:", err);
-
-    return res.status(500).json({
-      error: "Error al subir sprite",
-    });
-  }
 });
 
 
 
-
 app.put("/eliminarSprite", async (req, res) => {
-  const { idpersonaje, fileId } = req.body;
+  const { idpersonaje } = req.body;
 
   try {
     if (!idpersonaje) {
@@ -1984,14 +2100,27 @@ app.put("/eliminarSprite", async (req, res) => {
       });
     }
 
-    // Eliminar imagen de ImageKit
+    // 1. Recuperar identificador de ImageKit
+    const spriteResult = await pool.query(
+      `SELECT public_id FROM animaciones WHERE idpersonaje = $1`,
+      [idpersonaje]
+    );
+
+    if (spriteResult.rows.length === 0) {
+      return res.status(404).json({
+        error: "Animación no encontrada",
+      });
+    }
+
+    const fileId = spriteResult.rows[0].public_id;
+
+    // 2. Eliminar imagen de ImageKit
     if (fileId) {
       await imagekit.deleteFile(fileId);
-
       console.log("ImageKit deleteFile:", fileId);
     }
 
-    // Limpiar la animación en la base de datos
+    // 3. Limpiar animación en PostgreSQL
     const result = await pool.query(
       `
       UPDATE animaciones
@@ -2006,12 +2135,6 @@ app.put("/eliminarSprite", async (req, res) => {
       `,
       [idpersonaje]
     );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: "Animación no encontrada",
-      });
-    }
 
     res.json({
       ok: true,
@@ -2064,9 +2187,7 @@ app.post('/insertObjetoMagico', async (req, res) => {
       INSERT INTO tesoros (
         nombre, rareza, nivel, "costeVentaja", precio, descripcion, sistema
       )
-      VALUES (
-        $1, $2, $3, $4, $5, $6, $7
-      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING idobjeto
     `;
 
@@ -2083,7 +2204,9 @@ app.post('/insertObjetoMagico', async (req, res) => {
       const matches = imagen.match(/^data:image\/(\w+);base64,(.+)$/);
 
       if (!matches) {
-        return res.status(400).json({ error: 'Imagen base64 inválida.' });
+        return res.status(400).json({
+          error: 'Imagen base64 inválida.'
+        });
       }
 
       const ext = matches[1];
@@ -2099,14 +2222,14 @@ app.post('/insertObjetoMagico', async (req, res) => {
       imageUrl = uploadResult.url;
       const imageFileId = uploadResult.fileId;
 
-      // 3. Actualizar URL e ID de ImageKit en la base de datos
+      // 3. Actualizar URL e ID de ImageKit
       await pool.query(
         'UPDATE tesoros SET imagenurl = $1, imagenfileid = $2 WHERE idobjeto = $3',
         [imageUrl, imageFileId, newId]
       );
     }
 
-    // 4. Responder con éxito y URL
+    // 4. Responder
     res.status(201).json({
       message: 'tesoro creado exitosamente.',
       idobjeto: newId,
@@ -2115,6 +2238,7 @@ app.post('/insertObjetoMagico', async (req, res) => {
 
   } catch (err) {
     console.error('Error al insertar objeto magico nuevo:', err);
+
     res.status(500).json({
       error: 'Error al insertar objeto magico nuevo.'
     });
@@ -2141,7 +2265,19 @@ app.put('/updateObjetoMagico/:id', async (req, res) => {
     let imageUrl = null;
     let imageFileId = null;
 
-    // Si viene una nueva imagen en base64, subirla a ImageKit
+    // 1. Obtener ID de la imagen anterior
+    const anteriorResult = await pool.query(
+      'SELECT imagenfileid FROM tesoros WHERE idobjeto = $1',
+      [id]
+    );
+
+    if (anteriorResult.rowCount === 0) {
+      return res.status(404).json({ error: 'Objeto mágico no encontrado.' });
+    }
+
+    const imagenAnterior = anteriorResult.rows[0].imagenfileid;
+
+    // 2. Si viene una nueva imagen en base64, subirla a ImageKit
     if (imagen && imagen.startsWith('data:image/')) {
       const matches = imagen.match(/^data:image\/(\w+);base64,(.+)$/);
 
@@ -2162,7 +2298,7 @@ app.put('/updateObjetoMagico/:id', async (req, res) => {
       imageFileId = uploadResult.fileId;
     }
 
-    // Armar la query de actualización
+    // 3. Armar la query de actualización
     let updateQuery = `
       UPDATE tesoros SET
         nombre = $1,
@@ -2193,6 +2329,11 @@ app.put('/updateObjetoMagico/:id', async (req, res) => {
     updateValues.push(id);
 
     await pool.query(updateQuery, updateValues);
+
+    // 4. Eliminar imagen anterior de ImageKit
+    if (imageFileId && imagenAnterior && imagenAnterior !== imageFileId) {
+      await imagekit.deleteFile(imagenAnterior);
+    }
 
     res.json({
       message: 'Objeto mágico actualizado exitosamente.'
@@ -3002,6 +3143,7 @@ app.put('/agregarImagenColeccion/:id', async (req, res) => {
 });
 
 
+
 app.put('/cambiarImagenColeccion/:id', async (req, res) => {
   const idpersonaje = req.params.id;
   const { imagenId, nuevaImagen } = req.body;
@@ -3021,7 +3163,7 @@ app.put('/cambiarImagenColeccion/:id', async (req, res) => {
       return res.status(400).json({ error: 'Debe enviarse el ID de la imagen a reemplazar.' });
     }
 
-    // 🔹 Validar formato de imagen
+    // Validar formato de imagen
     const matches = nuevaImagen.match(/^data:image\/(\w+);base64,(.+)$/);
 
     if (!matches) {
@@ -3030,7 +3172,7 @@ app.put('/cambiarImagenColeccion/:id', async (req, res) => {
 
     const ext = matches[1];
 
-    // 🔹 Traemos la colección actual
+    // Traer colección actual
     const { rows } = await pool.query(
       'SELECT "coleccionImagenes" FROM personajes WHERE idpersonaje = $1',
       [idpersonaje]
@@ -3045,14 +3187,14 @@ app.put('/cambiarImagenColeccion/:id', async (req, res) => {
       ? JSON.parse(coleccion)
       : coleccion;
 
-    // 🔹 Buscar imagen a reemplazar
+    // Buscar imagen a reemplazar
     const index = coleccion.findIndex(img => img.id === imagenId);
 
     if (index === -1) {
       return res.status(404).json({ error: 'Imagen no encontrada en la colección.' });
     }
 
-    // 🔹 Subir nueva imagen a ImageKit
+    // Subir nueva imagen a ImageKit
     const uploadResult = await subirImagenImageKit(
       nuevaImagen,
       'personajes',
@@ -3062,9 +3204,9 @@ app.put('/cambiarImagenColeccion/:id', async (req, res) => {
     const imagenurl = uploadResult.imagenurl;
     const cloudid = uploadResult.imagencloudid;
 
-    // 🔹 Borrar imagen anterior de ImageKit
+    // Borrar imagen anterior de ImageKit
     try {
-      await imagekit.files.delete(imagenId);
+      await imagekit.deleteFile(imagenId);
     } catch (err) {
       console.warn(
         'No se pudo borrar la imagen vieja de ImageKit:',
@@ -3072,13 +3214,13 @@ app.put('/cambiarImagenColeccion/:id', async (req, res) => {
       );
     }
 
-    // 🔹 Reemplazar imagen en la colección
+    // Reemplazar imagen en la colección
     coleccion[index] = {
       id: cloudid,
       url: imagenurl
     };
 
-    // 🔹 Actualizar base de datos
+    // Actualizar base de datos
     await pool.query(
       `UPDATE personajes
        SET "coleccionImagenes" = $1,
@@ -3094,7 +3236,7 @@ app.put('/cambiarImagenColeccion/:id', async (req, res) => {
       ]
     );
 
-    // 🔹 Respuesta
+    // Respuesta
     res.status(200).json({
       message: 'Imagen reemplazada correctamente.',
       coleccion,
@@ -3112,8 +3254,10 @@ app.put('/cambiarImagenColeccion/:id', async (req, res) => {
     });
   }
 });
+;
 
 //la coleccion guarda imagenes en kit
+
 app.put('/eliminarImagenColeccion/:id', async (req, res) => {
   const idpersonaje = req.params.id;
   const { imagenId } = req.body;
@@ -3126,7 +3270,7 @@ app.put('/eliminarImagenColeccion/:id', async (req, res) => {
       return res.status(400).json({ error: 'Debe enviarse el ID de la imagen.' });
     }
 
-    // 🔹 Traer datos actuales
+    // Traer datos actuales
     const { rows } = await pool.query(
       'SELECT "coleccionImagenes", "imagenSeleccionada" FROM personajes WHERE idpersonaje = $1',
       [idpersonaje]
@@ -3139,38 +3283,39 @@ app.put('/eliminarImagenColeccion/:id', async (req, res) => {
     let coleccion = rows[0].coleccionImagenes || [];
     const imagenSeleccionada = rows[0].imagenSeleccionada;
 
-    coleccion = typeof coleccion === 'string' ? JSON.parse(coleccion) : coleccion;
+    coleccion = typeof coleccion === 'string'
+      ? JSON.parse(coleccion)
+      : coleccion;
 
-    // 🔹 Buscar imagen a eliminar
+    // Buscar imagen a eliminar
     const index = coleccion.findIndex(img => img.id === imagenId);
+
     if (index === -1) {
       return res.status(404).json({ error: 'Imagen no encontrada en la colección.' });
     }
 
-   // 🔹 Borrar de ImageKit
-try {
-  await imagekit.files.delete(coleccion[index].id);
-} catch (err) {
-  console.warn('No se pudo borrar de ImageKit:', err.message);
-}
+    // Borrar de ImageKit
+    try {
+      await imagekit.deleteFile(coleccion[index].id);
+    } catch (err) {
+      console.warn('No se pudo borrar de ImageKit:', err.message);
+    }
 
-    // 🔹 Eliminar de la colección
+    // Eliminar de la colección
     coleccion.splice(index, 1);
 
-    // 🔥 LÓGICA CLAVE: nueva imagen seleccionada
+    // Nueva imagen seleccionada
     let nuevaSeleccion = null;
 
     if (coleccion.length > 0) {
-      // si borraste la seleccionada → elegir otra
       if (imagenSeleccionada === imagenId) {
-        nuevaSeleccion = coleccion[0]; // simple y efectivo
+        nuevaSeleccion = coleccion[0];
       } else {
-        // mantener la misma seleccionada
         nuevaSeleccion = coleccion.find(img => img.id === imagenSeleccionada) || coleccion[0];
       }
     }
 
-    // 🔹 Guardar en DB
+    // Guardar en DB
     await pool.query(
       `UPDATE personajes 
        SET "coleccionImagenes" = $1,
@@ -3186,7 +3331,7 @@ try {
       ]
     );
 
-    // 🔹 Respuesta
+    // Respuesta
     res.status(200).json({
       message: 'Imagen eliminada correctamente.',
       coleccion,
@@ -3199,6 +3344,7 @@ try {
     res.status(500).json({ error: 'Error al eliminar imagen.' });
   }
 });
+
 
 app.put('/seleccionarImagen/:id', async (req, res) => {
 
@@ -3294,6 +3440,7 @@ app.get('/ConsumirItemsManual', async (req, res) => {
     }
 });
 
+
 app.post('/insertItem', async (req, res) => {
 
   const nombre = req.body.Nombre || req.body.nombre || "Ítem sin nombre";
@@ -3308,10 +3455,9 @@ app.post('/insertItem', async (req, res) => {
   const precio = String(req.body.precio ?? req.body.Precio ?? "");
   const imagen = req.body.Imagen_url || null;
   const posicion = req.body.Posicion ?? req.body.posicion ?? null;
-    
+
   const contenedor = req.body.Contenedor ?? req.body.contenedor ?? null;
   const efecto = req.body.Efecto ?? req.body.efecto ?? null;
-
 
   if (!idpersonaje) {
     return res.status(400).json({ error: 'Falta idpersonaje' });
@@ -3364,22 +3510,19 @@ app.post('/insertItem', async (req, res) => {
 
         if (matches) {
           const ext = matches[1];
-          const data = matches[2];
 
-          const uploadResult = await subirImagenCloudinaryEscritorio(
-            `data:image/${ext};base64,${data}`,
-            {
-              folder: 'items',
-              public_id: `item_${newId}`,
-              overwrite: true,
-            }
+          const uploadResult = await subirImagenImageKit(
+            imagen,
+            'items',
+            `item_${newId}.${ext}`
           );
 
-          imageUrl = uploadResult.secure_url;
+          imageUrl = uploadResult.imagenurl;
+          const imageFileId = uploadResult.imagencloudid;
 
           await clientDb.query(
             'UPDATE items SET imagen_url = $1, imagen_cloud_id = $2 WHERE id = $3',
-            [imageUrl, uploadResult.public_id, newId]
+            [imageUrl, imageFileId, newId]
           );
         }
       }
@@ -3402,6 +3545,7 @@ app.post('/insertItem', async (req, res) => {
     clientDb.release();
   }
 });
+
 
 
 app.put('/ActualizarPosicionItem', async (req, res) => {
@@ -3433,6 +3577,8 @@ app.put('/ActualizarPosicionItem', async (req, res) => {
 
 
 //los items estan gaurdados en imagenkit
+
+
 app.delete('/deleteItem', async (req, res) => {
 
   const iditem = req.body.iditem || req.body.IdItem;
@@ -3462,7 +3608,6 @@ app.delete('/deleteItem', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-
       await clientDb.query('ROLLBACK');
 
       return res.status(404).json({
@@ -3470,54 +3615,28 @@ app.delete('/deleteItem', async (req, res) => {
       });
     }
 
-    const {
-      imagen_cloud_id,
-      imagen_url
-    } = result.rows[0];
+    const { imagen_cloud_id } = result.rows[0];
 
-
-   
-    // 2. Eliminar imagen
+    // 2. Eliminar imagen de ImageKit
     if (imagen_cloud_id) {
 
       try {
 
-        if (
-          imagen_url &&
-          imagen_url.includes('ik.imagekit.io/')
-        ) {
+        console.log(
+          `Item ${iditem}: eliminando imagen de ImageKit`
+        );
 
-          console.log(
-            `🟢 Item ${iditem}: eliminando imagen de ImageKit`
-          );
+        await imagekit.deleteFile(imagen_cloud_id);
 
-          await imagekit.files.delete(imagen_cloud_id);
-
-        } else if (
-          imagen_url &&
-          imagen_url.includes('res.cloudinary.com/ucoamrxg/')
-        ) {
-
-          console.log(
-            `🟢 Item ${iditem}: eliminando imagen de Cloudinary Escritorio`
-          );
-
-          await eliminarImagenCloudinaryEscritorio(
-            imagen_cloud_id
-          );
-        }
-
-      } catch (cloudErr) {
+      } catch (imageErr) {
 
         console.error(
-          `⚠️ Error eliminando imagen del item ${iditem}:`,
-          cloudErr
+          `Error eliminando imagen del item ${iditem}:`,
+          imageErr
         );
 
       }
     }
-
-
 
     // 3. Eliminar item de PostgreSQL
     await clientDb.query(
@@ -3528,15 +3647,12 @@ app.delete('/deleteItem', async (req, res) => {
       [iditem]
     );
 
-
     await clientDb.query('COMMIT');
-
 
     res.status(200).json({
       message: 'Item eliminado correctamente',
       iditem
     });
-
 
   } catch (err) {
 
@@ -3557,35 +3673,6 @@ app.delete('/deleteItem', async (req, res) => {
   }
 });
 
-
-async function eliminarImagenCloudinaryEscritorio(publicId) {
-
-  const cloudinaryEscritorio = require('cloudinary').v2;
-
-  const resultado = await new Promise((resolve, reject) => {
-
-    cloudinaryEscritorio.uploader.destroy(
-      publicId,
-      {
-        cloud_name: 'ucoamrxg',
-        api_key: '975696536842629',
-        api_secret: 'm6m_AmX0mlMxAXRBJrpFxCwE5Io'
-      },
-      (error, result) => {
-
-        if (error) {
-          reject(error);
-          return;
-        }
-
-        resolve(result);
-      }
-    );
-
-  });
-
-  return resultado;
-}
 
 app.put('/ActualizarCantidadItem', async (req, res) => {
 
@@ -3651,6 +3738,7 @@ app.get('/ConsumirItemsBiblioteca', async (req, res) => {
     }
 });
 
+
 app.post('/insertItemBiblioteca', async (req, res) => {
 
   const nombre = req.body.Nombre || req.body.nombre || "Ítem sin nombre";
@@ -3663,8 +3751,6 @@ app.post('/insertItemBiblioteca', async (req, res) => {
   const costeVentaja = req.body.CosteVentaja || req.body.costeVentaja || "";
   const imagen = req.body.Imagen_url || req.body.imagen_url || null;
   const efecto = req.body.Efecto ?? req.body.efecto ?? "";
-
-
 
   const clientDb = await pool.connect();
 
@@ -3722,42 +3808,28 @@ app.post('/insertItemBiblioteca', async (req, res) => {
 
       } else {
 
-        const matches = imagen.match(
-          /^data:image\/(\w+);base64,(.+)$/
+        const uploadResult = await subirImagenImageKit(
+          imagen,
+          'items',
+          `item_biblioteca_${newId}`
         );
 
-        if (matches) {
+        imageUrl = uploadResult.imagenurl;
+        imageCloudId = uploadResult.imagencloudid;
 
-          const ext = matches[1];
-          const data = matches[2];
-
-          const uploadResult =
-            await subirImagenCloudinaryEscritorio(
-              `data:image/${ext};base64,${data}`,
-              {
-                folder: 'items',
-                public_id: `item_biblioteca_${newId}`,
-                overwrite: true
-              }
-            );
-
-          imageUrl = uploadResult.secure_url;
-          imageCloudId = uploadResult.public_id;
-
-          await clientDb.query(
-            `
-            UPDATE items_biblioteca
-            SET imagenurl = $1,
-                imagencloudid = $2
-            WHERE idobjeto = $3
-            `,
-            [
-              imageUrl,
-              imageCloudId,
-              newId
-            ]
-          );
-        }
+        await clientDb.query(
+          `
+          UPDATE items_biblioteca
+          SET imagenurl = $1,
+              imagencloudid = $2
+          WHERE idobjeto = $3
+          `,
+          [
+            imageUrl,
+            imageCloudId,
+            newId
+          ]
+        );
       }
     }
 
@@ -3922,6 +3994,7 @@ app.post('/crearAccionesIniciales', async (req, res) => {
     }
 });
 
+
 app.post('/insertAccion', async (req, res) => {
 
   const nombre = req.body.Nombre || req.body.nombre || "Accion sin nombre";
@@ -3940,8 +4013,7 @@ app.post('/insertAccion', async (req, res) => {
 
   const efecto = req.body.Efecto || req.body.efecto || null;
 
-
-    // Campos específicos de tipo de acción
+  // Campos específicos de tipo de acción
   const prioridad = req.body.Prioridad || "";
   const dominio = req.body.Dominio || "";
   const arte = req.body.Arte || "";
@@ -3949,9 +4021,6 @@ app.post('/insertAccion', async (req, res) => {
   const tiempo_invocacion = req.body.Tiempo_invocacion || "";
   const nivel_ki = req.body.Nivel_ki ?? 0;
   const coste_ki = req.body.Coste_ki ?? 0;
-
-
- 
 
   if (!idpersonaje) {
     return res.status(400).json({ error: 'Falta idpersonaje' });
@@ -3962,7 +4031,7 @@ app.post('/insertAccion', async (req, res) => {
   try {
     await clientDb.query('BEGIN');
 
-   const queryItem = `
+    const queryItem = `
       INSERT INTO acciones (
         nombre,
         tipo,
@@ -3973,7 +4042,6 @@ app.post('/insertAccion', async (req, res) => {
         contenedor,
         efecto,
         idpersonaje,
-
         prioridad,
         dominio,
         arte,
@@ -3989,7 +4057,6 @@ app.post('/insertAccion', async (req, res) => {
       )
       RETURNING id
     `;
-
 
     const resultItem = await clientDb.query(queryItem, [
       nombre,
@@ -4013,9 +4080,12 @@ app.post('/insertAccion', async (req, res) => {
     const newId = resultItem.rows[0].id;
 
     let imageUrl = null;
+    let imageCloudId = null;
 
     if (imagen) {
+
       if (imagen.startsWith('http')) {
+
         imageUrl = imagen;
 
         await clientDb.query(
@@ -4024,28 +4094,20 @@ app.post('/insertAccion', async (req, res) => {
         );
 
       } else {
-        const matches = imagen.match(/^data:image\/(\w+);base64,(.+)$/);
 
-        if (matches) {
-          const ext = matches[1];
-          const data = matches[2];
+        const uploadResult = await subirImagenImageKit(
+          imagen,
+          'acciones',
+          `accion_${newId}`
+        );
 
-          const uploadResult = await subirImagenCloudinaryEscritorio(
-            `data:image/${ext};base64,${data}`,
-            {
-              folder: 'acciones',
-              public_id: `accion_${newId}`,
-              overwrite: true,
-            }
-          );
+        imageUrl = uploadResult.imagenurl;
+        imageCloudId = uploadResult.imagencloudid;
 
-          imageUrl = uploadResult.secure_url;
-
-          await clientDb.query(
-            'UPDATE acciones SET imagen_url = $1, imagen_cloud_id = $2 WHERE id = $3',
-            [imageUrl, uploadResult.public_id, newId]
-          );
-        }
+        await clientDb.query(
+          'UPDATE acciones SET imagen_url = $1, imagen_cloud_id = $2 WHERE id = $3',
+          [imageUrl, imageCloudId, newId]
+        );
       }
     }
 
@@ -4067,6 +4129,8 @@ app.post('/insertAccion', async (req, res) => {
   }
 });
 
+
+
 app.post('/insertAccionBiblioteca', async (req, res) => {
 
   const nombre = req.body.Nombre || req.body.nombre || "Accion sin nombre";
@@ -4079,17 +4143,13 @@ app.post('/insertAccionBiblioteca', async (req, res) => {
   const imagen = req.body.Imagen_url || null;
   const efecto = req.body.Efecto || req.body.efecto || null;
 
-
   const prioridad = req.body.Prioridad || "";
-const dominio = req.body.Dominio || "";
-const arte = req.body.Arte || "";
-const ryu = req.body.Ryu || "";
-const tiempo_invocacion = req.body.Tiempo_invocacion || "";
-const nivel_ki = req.body.Nivel_ki ?? 0;
-const coste_ki = req.body.Coste_ki ?? 0;
-
-
-
+  const dominio = req.body.Dominio || "";
+  const arte = req.body.Arte || "";
+  const ryu = req.body.Ryu || "";
+  const tiempo_invocacion = req.body.Tiempo_invocacion || "";
+  const nivel_ki = req.body.Nivel_ki ?? 0;
+  const coste_ki = req.body.Coste_ki ?? 0;
 
   const clientDb = await pool.connect();
 
@@ -4097,30 +4157,28 @@ const coste_ki = req.body.Coste_ki ?? 0;
 
     await clientDb.query('BEGIN');
 
-
     const queryAccion = `
-     INSERT INTO acciones_biblioteca (
-    nombre,
-    tipo,
-    descripcion,
-    sistema,
-    rareza,
-    efecto,
-    prioridad,
-    dominio,
-    arte,
-    ryu,
-    tiempo_invocacion,
-    nivel_ki,
-    coste_ki
-)
-VALUES (
-    $1,$2,$3,$4,$5,$6,
-    $7,$8,$9,$10,$11,$12,$13
-)
-RETURNING id
+      INSERT INTO acciones_biblioteca (
+        nombre,
+        tipo,
+        descripcion,
+        sistema,
+        rareza,
+        efecto,
+        prioridad,
+        dominio,
+        arte,
+        ryu,
+        tiempo_invocacion,
+        nivel_ki,
+        coste_ki
+      )
+      VALUES (
+        $1,$2,$3,$4,$5,$6,
+        $7,$8,$9,$10,$11,$12,$13
+      )
+      RETURNING id
     `;
-
 
     const resultAccion = await clientDb.query(queryAccion, [
       nombre,
@@ -4130,20 +4188,18 @@ RETURNING id
       rareza,
       efecto,
       prioridad,
-    dominio,
-    arte,
-    ryu,
-    tiempo_invocacion,
-    nivel_ki,
-    coste_ki
+      dominio,
+      arte,
+      ryu,
+      tiempo_invocacion,
+      nivel_ki,
+      coste_ki
     ]);
-
 
     const newId = resultAccion.rows[0].id;
 
-
     let imageUrl = null;
-
+    let imageCloudId = null;
 
     if (imagen) {
 
@@ -4156,59 +4212,40 @@ RETURNING id
           [imageUrl, newId]
         );
 
-      } 
-      else {
+      } else {
 
-        const matches = imagen.match(/^data:image\/(\w+);base64,(.+)$/);
+        const uploadResult = await subirImagenImageKit(
+          imagen,
+          'acciones_biblioteca',
+          `accion_biblioteca_${newId}`
+        );
 
+        imageUrl = uploadResult.imagenurl;
+        imageCloudId = uploadResult.imagencloudid;
 
-        if (matches) {
-
-          const ext = matches[1];
-          const data = matches[2];
-
-
-          const uploadResult = await subirImagenCloudinaryEscritorio(
-            `data:image/${ext};base64,${data}`,
-            {
-              folder: 'acciones_biblioteca',
-              public_id: `accion_biblioteca_${newId}`,
-              overwrite: true,
-            }
-          );
-
-
-          imageUrl = uploadResult.secure_url;
-
-
-          await clientDb.query(
-            `
-            UPDATE acciones_biblioteca
-            SET imagen_url = $1,
-                imagen_cloud_id = $2
-            WHERE id = $3
-            `,
-            [
-              imageUrl,
-              uploadResult.public_id,
-              newId
-            ]
-          );
-
-        }
+        await clientDb.query(
+          `
+          UPDATE acciones_biblioteca
+          SET imagen_url = $1,
+              imagen_cloud_id = $2
+          WHERE id = $3
+          `,
+          [
+            imageUrl,
+            imageCloudId,
+            newId
+          ]
+        );
       }
     }
 
-
     await clientDb.query('COMMIT');
-
 
     res.status(201).json({
       message: 'Accion guardada en biblioteca correctamente',
       idaccion: newId,
       imagen_url: imageUrl
     });
-
 
   } catch (err) {
 
@@ -4227,6 +4264,7 @@ RETURNING id
   }
 
 });
+
 
 app.get('/ConsumirAccionesBiblioteca', async (req, res) => {
     try {
@@ -4277,6 +4315,7 @@ app.put('/ActualizarPosicionAccion', async (req, res) => {
 
 
 //las acciones estan guardadas en imagenkit
+
 app.delete('/deleteAccion', async (req, res) => {
 
   const idaccion = req.body.idaccion || req.body.IdAccion;
@@ -4312,52 +4351,32 @@ app.delete('/deleteAccion', async (req, res) => {
       });
     }
 
-    const {
-      imagen_cloud_id,
-      imagen_url
-    } = result.rows[0];
+    const { imagen_cloud_id, imagen_url } = result.rows[0];
 
-
-  // 2. Eliminar imagen
-    if (imagen_cloud_id) {
+    // 2. Eliminar imagen de ImageKit
+    if (
+      imagen_cloud_id &&
+      imagen_url &&
+      imagen_url.includes('ik.imagekit.io/')
+    ) {
 
       try {
 
-        if (
-          imagen_url &&
-          imagen_url.includes('ik.imagekit.io/')
-        ) {
+        console.log(
+          `🟢 Acción ${idaccion}: eliminando imagen de ImageKit`
+        );
 
-          console.log(
-            `🟢 Acción ${idaccion}: eliminando imagen de ImageKit`
-          );
+        await imagekit.files.delete(imagen_cloud_id);
 
-          await imagekit.files.delete(imagen_cloud_id);
-
-        } else if (
-          imagen_url &&
-          imagen_url.includes('res.cloudinary.com/ucoamrxg/')
-        ) {
-
-          console.log(
-            `🟢 Acción ${idaccion}: eliminando imagen de Cloudinary Escritorio`
-          );
-
-          await eliminarImagenCloudinaryEscritorio(
-            imagen_cloud_id
-          );
-        }
-
-      } catch (cloudErr) {
+      } catch (imageErr) {
 
         console.error(
           `⚠️ Error eliminando imagen de acción ${idaccion}:`,
-          cloudErr
+          imageErr
         );
 
       }
     }
-
 
     // 3. Eliminar acción de PostgreSQL
     await clientDb.query(
@@ -4368,15 +4387,12 @@ app.delete('/deleteAccion', async (req, res) => {
       [idaccion]
     );
 
-
     await clientDb.query('COMMIT');
-
 
     res.status(200).json({
       message: 'Accion eliminada correctamente',
       idaccion
     });
-
 
   } catch (err) {
 
@@ -4399,33 +4415,8 @@ app.delete('/deleteAccion', async (req, res) => {
 });
 
 
-async function eliminarImagenCloudinaryEscritorio(publicId) {
-  const cloudinaryEscritorio = require('cloudinary').v2;
 
-  const resultado = await new Promise((resolve, reject) => {
 
-    cloudinaryEscritorio.uploader.destroy(
-      publicId,
-      {
-        cloud_name: 'ucoamrxg',
-        api_key: '975696536842629',
-        api_secret: 'm6m_AmX0mlMxAXRBJrpFxCwE5Io'
-      },
-      (error, result) => {
-
-        if (error) {
-          reject(error);
-          return;
-        }
-
-        resolve(result);
-      }
-    );
-
-  });
-
-  return resultado;
-}
 //*************************************************************************** */
 
 
@@ -4998,527 +4989,11 @@ app.get('/consumirPersonaje/:idPersonaje', async (req, res) => {
   }
 });
 
-/* esto funciona para migrar imagenes de personajes a cloudinary y traerme la url y el cloudid a la base de datos
-async function migrarImagenPersonaje(idpersonaje) {
-  const resultado = await pool.query(
-    `SELECT idpersonaje, nombre, imagen
-     FROM personajes
-     WHERE idpersonaje = $1`,
-    [idpersonaje]
-  );
 
-  if (resultado.rows.length === 0) {
-    throw new Error(`Personaje ${idpersonaje} no encontrado.`);
-  }
 
-  const personaje = resultado.rows[0];
 
-  if (!personaje.imagen) {
-    throw new Error(`El personaje ${idpersonaje} no tiene imagen Base64.`);
-  }
 
-  let imagenBase64 = personaje.imagen;
 
-  if (!imagenBase64.startsWith('data:image/')) {
-    imagenBase64 = `data:image/jpeg;base64,${imagenBase64}`;
-  }
-
-  const uploadResult = await cloudinary.uploader.upload(
-    imagenBase64,
-    {
-      folder: 'personajes',
-      public_id: `personaje_${idpersonaje}`,
-      overwrite: true
-    }
-  );
-
-  console.log('=================================');
-  console.log('IMAGEN MIGRADA');
-  console.log('Personaje:', personaje.nombre);
-  console.log('ID:', idpersonaje);
-  console.log('Nueva URL:', uploadResult.secure_url);
-  console.log('Nuevo Cloud ID:', uploadResult.public_id);
-  console.log('=================================');
-
-  return {
-    idpersonaje: personaje.idpersonaje,
-    nombre: personaje.nombre,
-    imagenurl: uploadResult.secure_url,
-    imagencloudid: uploadResult.public_id
-  };
-}
-*/
-
-//descarga la imagen usando la url de cloudinary y la mete en la base de datos postgresql en base64
-/* funciono descargar imagen de cloudinary y guardarla en base64 en la base de datos
-async function recuperarYGuardarBase64(idpersonaje) {
-  try {
-    const resultado = await pool.query(
-      `SELECT idpersonaje, nombre, imagenurl, imagen
-       FROM personajes
-       WHERE idpersonaje = $1`,
-      [idpersonaje]
-    );
-
-    if (resultado.rows.length === 0) {
-      throw new Error(`Personaje ${idpersonaje} no encontrado.`);
-    }
-
-    const personaje = resultado.rows[0];
-
-    if (!personaje.imagenurl) {
-      throw new Error(`El personaje ${idpersonaje} no tiene imagenurl.`);
-    }
-
-    if (personaje.imagen) {
-      throw new Error(`El personaje ${idpersonaje} ya tiene imagen Base64.`);
-    }
-
-    console.log('=================================');
-    console.log('RECUPERANDO IMAGEN');
-    console.log('Personaje:', personaje.nombre);
-    console.log('ID:', personaje.idpersonaje);
-    console.log('URL:', personaje.imagenurl);
-
-    const respuesta = await fetch(personaje.imagenurl);
-
-    if (!respuesta.ok) {
-      throw new Error(
-        `Cloudinary respondió con HTTP ${respuesta.status}`
-      );
-    }
-
-    const arrayBuffer = await respuesta.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const contentType =
-      respuesta.headers.get('content-type') || 'image/jpeg';
-
-    const base64 = buffer.toString('base64');
-
-    const imagenBase64 = `data:${contentType};base64,${base64}`;
-
-    console.log('Tamaño original:', buffer.length, 'bytes');
-    console.log('Content-Type:', contentType);
-    console.log('Longitud Base64:', imagenBase64.length);
-
-    // GUARDAR BASE64 EN POSTGRESQL
-    await pool.query(
-      `UPDATE personajes
-       SET imagen = $1
-       WHERE idpersonaje = $2`,
-      [imagenBase64, idpersonaje]
-    );
-
-    console.log('✅ Base64 guardado correctamente en PostgreSQL.');
-    console.log('=================================');
-
-    return imagenBase64;
-
-  } catch (error) {
-    console.error('❌ Error recuperando y guardando imagen:', error);
-    throw error;
-  }
-}
-*/
-
-// guarda la imagen en cloudinary y trae la url y el cloudid a la base de datos
-/*
-async function subirBase64ACloudinary(idpersonaje) {
-  try {
-    const resultado = await pool.query(
-      `SELECT idpersonaje, nombre, imagen
-       FROM personajes
-       WHERE idpersonaje = $1`,
-      [idpersonaje]
-    );
-
-    if (resultado.rows.length === 0) {
-      throw new Error(`Personaje ${idpersonaje} no encontrado.`);
-    }
-
-    const personaje = resultado.rows[0];
-
-    if (!personaje.imagen) {
-      throw new Error(`El personaje ${idpersonaje} no tiene imagen Base64.`);
-    }
-
-    console.log('=================================');
-    console.log('SUBIENDO IMAGEN A CLOUDINARY');
-    console.log('Personaje:', personaje.nombre);
-    console.log('ID:', personaje.idpersonaje);
-
-    const uploadResult = await cloudinary.uploader.upload(
-      personaje.imagen,
-      {
-        folder: 'personajes',
-        public_id: `personaje_${idpersonaje}`,
-        overwrite: true
-      }
-    );
-
-    const imagenUrl = uploadResult.secure_url;
-    const imagenCloudId = uploadResult.public_id;
-
-    console.log('Nueva URL:', imagenUrl);
-    console.log('Nuevo Cloud ID:', imagenCloudId);
-
-    await pool.query(
-      `UPDATE personajes
-       SET imagenurl = $1,
-           imagencloudid = $2
-       WHERE idpersonaje = $3`,
-      [imagenUrl, imagenCloudId, idpersonaje]
-    );
-
-    console.log('✅ imagenurl guardado.');
-    console.log('✅ imagencloudid guardado.');
-    console.log('=================================');
-
-  } catch (error) {
-    console.error('❌ Error:', error);
-  }
-}
-*/
-
-
-/* me ayudo a recuperar todas las que tenai url y ponerles base 64
-async function recuperarYGuardarBase64() {
-  try {
-    const resultado = await pool.query(`
-      SELECT idpersonaje, nombre, imagenurl, imagen
-      FROM personajes
-      WHERE imagenurl IS NOT NULL
-        AND imagenurl LIKE '%res.cloudinary.com%'
-        AND (imagen IS NULL OR imagen = '')
-      ORDER BY idpersonaje
-    `);
-
-    const personajes = resultado.rows;
-
-    console.log(`=================================`);
-    console.log(`PERSONAJES A RECUPERAR: ${personajes.length}`);
-    console.log(`=================================`);
-
-    for (const personaje of personajes) {
-
-      try {
-        const {
-          idpersonaje,
-          nombre,
-          imagenurl
-        } = personaje;
-
-        console.log('=================================');
-        console.log('RECUPERANDO IMAGEN');
-        console.log('Personaje:', nombre);
-        console.log('ID:', idpersonaje);
-        console.log('URL:', imagenurl);
-
-        const respuesta = await fetch(imagenurl);
-
-        if (!respuesta.ok) {
-          throw new Error(
-            `Cloudinary respondió con HTTP ${respuesta.status}`
-          );
-        }
-
-        const arrayBuffer = await respuesta.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        const contentType =
-          respuesta.headers.get('content-type') || 'image/jpeg';
-
-        const base64 = buffer.toString('base64');
-
-        const imagenBase64 =
-          `data:${contentType};base64,${base64}`;
-
-        console.log(
-          'Tamaño original:',
-          buffer.length,
-          'bytes'
-        );
-
-        console.log(
-          'Content-Type:',
-          contentType
-        );
-
-        console.log(
-          'Longitud Base64:',
-          imagenBase64.length
-        );
-
-        await pool.query(
-          `UPDATE personajes
-           SET imagen = $1
-           WHERE idpersonaje = $2`,
-          [imagenBase64, idpersonaje]
-        );
-
-        console.log(
-          `✅ Base64 guardado correctamente para ${nombre} (${idpersonaje}).`
-        );
-
-      } catch (error) {
-
-        console.error(
-          `❌ Error con personaje ${personaje.idpersonaje} (${personaje.nombre}):`,
-          error.message
-        );
-
-      }
-    }
-
-    console.log('=================================');
-    console.log('🎉 RECUPERACIÓN DE BASE64 TERMINADA');
-    console.log('=================================');
-
-  } catch (error) {
-    console.error(
-      '🚨 Error general recuperando imágenes:',
-      error.message
-    );
-  }
-}
-*/
-
-//***************************************************** 
-
-
-/*
-//******************PRIMER PASO 1*******************************
-//Script PARA MIGRAR PERSONAJES A CLOUDNARY y traerme la url y cludid a la base de datos OK!!
-//ESTE ES EL PRIMER PASO PARA EL TRATAMIENTO DE LA BASE DE DATOS
-async function migrarImagenesPersonajes() {
-  try {
-    const resultado = await pool.query(`
-      SELECT idpersonaje, imagen, imagenurl
-      FROM personajes
-      WHERE imagen IS NOT NULL
-      AND (imagenurl IS NULL OR imagenurl NOT LIKE '%res.cloudinary.com%')
-    `);
-
-    const personajes = resultado.rows;
-
-    for (const personaje of personajes) {
-      const { idpersonaje, imagen } = personaje;
-
-      if (!imagen) {
-        console.log(`⚠️ Personaje ${idpersonaje} no tiene imagen. Saltando...`);
-        continue;
-      }
-
-      // Verificar si es una ruta local de dispositivo móvil (que no se puede subir desde backend)
-      if (imagen.startsWith('file://')) {
-        console.log(`⛔ Imagen de personaje ${idpersonaje} es una ruta local (file://...) y no es accesible desde el backend. Saltando...`);
-        continue;
-      }
-
-      try {
-        // Subir imagen a Cloudinary (se asume que 'imagen' es base64 sin prefijo data:image/...)
-        // Si tiene prefijo, hay que limpiarlo antes, aquí asumo que es base64 limpio
-        let base64data = imagen;
-        // Si tiene prefijo "data:image/xxx;base64,", removerlo
-        const base64PrefixMatch = imagen.match(/^data:image\/\w+;base64,/);
-        if (base64PrefixMatch) {
-          base64data = imagen.replace(/^data:image\/\w+;base64,/, '');
-        }
-
-        const res = await cloudinary.uploader.upload(
-          `data:image/jpeg;base64,${base64data}`,
-          {
-            folder: 'personajes',
-            public_id: `personaje_${idpersonaje}`,
-            overwrite: true,
-          }
-        );
-
-        const url = res.secure_url;
-        const publicId = res.public_id;
-
-        await pool.query(
-          `UPDATE personajes SET imagenurl = $1, imagencloudid = $2 WHERE idpersonaje = $3`,
-          [url, publicId, idpersonaje]
-        );
-
-        console.log(`✅ Imagen del personaje ${idpersonaje} migrada con éxito.`);
-      } catch (error) {
-        console.error(`❌ Error subiendo imagen del personaje ${idpersonaje}:`, error.message);
-      }
-    }
-
-    console.log('🎉 Migración de imágenes completada.');
-  } catch (error) {
-    console.error('🚨 Error general al migrar:', error.message);
-  }
-}
-
-migrarImagenesPersonajes();
-*/
-
-/*
-//*********************** SEGUNDO PASO 2 *******************************
-//PARA MIGRAR LAS IMAGENES de SAGAS Y OBTENER URL Y ID DE CLUDNARY OK!!
-async function migrarImagenesSagas() {
-  try {
-    console.log('🔄 Iniciando migración de imágenes de sagas...');
-
-    const resultado = await pool.query(`
-      SELECT idsaga, imagensaga, imagenurl
-      FROM sagas
-      WHERE imagensaga IS NOT NULL
-      AND (imagenurl IS NULL OR imagenurl NOT LIKE '%res.cloudinary.com%')
-    `);
-
-    const sagas = resultado.rows;
-    console.log(`📝 Se encontraron ${sagas.length} sagas para migrar.`);
-
-    for (const saga of sagas) {
-      const { idsaga, imagensaga } = saga;
-
-      console.log(`➡️ Procesando saga ID: ${idsaga}...`);
-
-      if (!imagensaga) {
-        console.log(`⚠️ Saga ${idsaga} no tiene imagen base64, se omite.`);
-        continue;
-      }
-
-      if (imagensaga.startsWith('file://')) {
-        console.log(`⛔ Imagen de saga ${idsaga} es ruta local (file://...), no accesible para backend, se omite.`);
-        continue;
-      }
-
-      try {
-        let base64data = imagensaga;
-        const base64PrefixMatch = imagensaga.match(/^data:image\/\w+;base64,/);
-        if (base64PrefixMatch) {
-          base64data = imagensaga.replace(/^data:image\/\w+;base64,/, '');
-          console.log(`🔍 Se removió prefijo base64 de saga ${idsaga}`);
-        }
-
-        console.log(`🚀 Subiendo imagen de saga ${idsaga} a Cloudinary...`);
-
-        const res = await cloudinary.uploader.upload(
-          `data:image/jpeg;base64,${base64data}`,
-          {
-            folder: 'sagas',
-            public_id: `saga_${idsaga}`,
-            overwrite: true,
-          }
-        );
-
-        const url = res.secure_url;
-        const publicId = res.public_id;
-
-        console.log(`✅ Imagen subida con URL: ${url}`);
-
-        await pool.query(
-          `UPDATE sagas SET imagenurl = $1, imagencloudid = $2 WHERE idsaga = $3`,
-          [url, publicId, idsaga]
-        );
-
-        console.log(`🎉 Actualización DB saga ${idsaga} completada.`);
-      } catch (error) {
-        console.error(`❌ Error subiendo imagen de saga ${idsaga}:`, error.message);
-      }
-    }
-
-    console.log('🎉 Migración de imágenes de sagas finalizada exitosamente.');
-  } catch (error) {
-    console.error('🚨 Error general al migrar sagas:', error.message);
-  } finally {
-    await pool.end();
-  }
-}
-
-migrarImagenesSagas();
-*/
-
-/*
-//*************************TERCER PASO*********************
-//PARA HACER LA MIGRACION DE LAS SECCIONES HACEMSO ESTO 
-async function migrarImagenesSecciones() {
-  try {
-    console.log('🔄 Iniciando migración de imágenes de secciones...');
-
-    const resultado = await pool.query(`
-      SELECT idseccion, imagen, imagenurl
-      FROM secciones
-      WHERE imagen IS NOT NULL
-      AND (imagenurl IS NULL OR imagenurl NOT LIKE '%res.cloudinary.com%')
-    `);
-
-    const secciones = resultado.rows;
-    console.log(`📝 Se encontraron ${secciones.length} secciones para migrar.`);
-
-    for (const seccion of secciones) {
-      const { idseccion, imagen } = seccion;
-
-      console.log(`➡️ Procesando sección ID: ${idseccion}...`);
-
-      if (!imagen) {
-        console.log(`⚠️ Sección ${idseccion} no tiene imagen base64, se omite.`);
-        continue;
-      }
-
-      if (imagen.startsWith('file://')) {
-        console.log(`⛔ Imagen de sección ${idseccion} es ruta local (file://...), no accesible para backend, se omite.`);
-        continue;
-      }
-
-      try {
-        let base64data = imagen;
-        const base64PrefixMatch = imagen.match(/^data:image\/\w+;base64,/);
-        if (base64PrefixMatch) {
-          base64data = imagen.replace(/^data:image\/\w+;base64,/, '');
-          console.log(`🔍 Se removió prefijo base64 de sección ${idseccion}`);
-        }
-
-        console.log(`🚀 Subiendo imagen de sección ${idseccion} a Cloudinary...`);
-
-        const res = await cloudinary.uploader.upload(
-          `data:image/jpeg;base64,${base64data}`,
-          {
-            folder: 'secciones',
-            public_id: `seccion_${idseccion}`,
-            overwrite: true,
-          }
-        );
-
-        const url = res.secure_url;
-        const publicId = res.public_id;
-
-        console.log(`✅ Imagen subida con URL: ${url}`);
-
-        await pool.query(
-          `UPDATE secciones SET imagenurl = $1, imagencloudid = $2 WHERE idseccion = $3`,
-          [url, publicId, idseccion]
-        );
-
-        console.log(`🎉 Actualización DB sección ${idseccion} completada.`);
-      } catch (error) {
-        console.error(`❌ Error subiendo imagen de sección ${idseccion}:`, error.message);
-      }
-    }
-
-    console.log('🎉 Migración de imágenes de secciones finalizada exitosamente.');
-  } catch (error) {
-    console.error('🚨 Error general al migrar secciones:', error.message);
-  } finally {
-    await pool.end();
-  }
-}
-
-migrarImagenesSecciones();
-*/
-
-/*
-server.listen(PORT, () => {
-  console.log(`🟢 Servidor Socket.IO corriendo en http://localhost:${PORT}`);
-});
-*/
 
 // ==========================================
 // MIGRAR IMÁGENES DE PERSONAJES A IMAGEKIT
@@ -5611,6 +5086,8 @@ async function migrarImagenesPersonajes() {
 }
 migrarImagenesPersonajes().catch(console.error);
 */
+
+
 
 server.listen(PORT, () => {
   console.log(`🟢 Servidor Socket.IO corriendo en puerto ${PORT}`);
