@@ -106,6 +106,9 @@ function normalizarMensaje(mensaje) {
     idusuarioReceptor:mensaje.idusuarioReceptor?.toString() ?? '',
     nombreReceptor:mensaje.nombreReceptor?.toString() ?? '',
     puntajeKen:mensaje.puntajeKen?.toString() ?? '',
+    nombreItem: mensaje.nombreItem?.toString() ?? '',
+    idItem: mensaje.idItem ?? 0,
+    idpersonajeDestino: mensaje.idpersonajeDestino?.toString() ?? '',
   };
 }
 
