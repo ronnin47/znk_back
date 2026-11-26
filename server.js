@@ -3864,6 +3864,187 @@ app.post('/insertItemBiblioteca', async (req, res) => {
   }
 });
 
+
+
+//**************************************************************************
+
+app.put('/TransferirItem', async (req, res) => {
+
+    const {
+        iditem,
+        idpersonajeOrigen,
+        idpersonajeDestino
+    } = req.body;
+/*
+    // 1. DATOS RECIBIDOS
+    console.log("========== TRANSFERIR ITEM ==========");
+    console.log("ID ITEM:", iditem);
+    console.log("PERSONAJE ORIGEN:", idpersonajeOrigen);
+    console.log("PERSONAJE DESTINO:", idpersonajeDestino);
+*/
+    if (!iditem || !idpersonajeOrigen || !idpersonajeDestino) {
+        return res.status(400).json({
+            resultado: "ERROR",
+            paso: "VALIDACION",
+            error: "Faltan datos para transferir el item",
+            recibido: req.body
+        });
+    }
+
+    const clientDb = await pool.connect();
+
+    try {
+
+        await clientDb.query('BEGIN');
+
+        console.log("TRANSACCION INICIADA");
+
+        // 2. VERIFICAR QUE EL ITEM PERTENEZCA AL ORIGEN
+        const resultado = await clientDb.query(
+            `
+            SELECT id, idpersonaje
+            FROM items
+            WHERE id = $1
+            FOR UPDATE
+            `,
+            [iditem]
+        );
+
+        console.log("ITEM ENCONTRADO:", resultado.rows);
+
+        if (resultado.rows.length === 0) {
+            await clientDb.query('ROLLBACK');
+
+            return res.status(404).json({
+                resultado: "ERROR",
+                paso: "BUSQUEDA ITEM",
+                error: "Item no encontrado",
+                iditem: iditem
+            });
+        }
+
+        if (
+            resultado.rows[0].idpersonaje.toString() !==
+            idpersonajeOrigen.toString()
+        ) {
+            await clientDb.query('ROLLBACK');
+
+            return res.status(403).json({
+                resultado: "ERROR",
+                paso: "VERIFICAR PROPIETARIO",
+                error: "El item no pertenece al personaje remitente",
+                propietarioActual: resultado.rows[0].idpersonaje,
+                personajeOrigen: idpersonajeOrigen
+            });
+        }
+
+        console.log("PROPIETARIO VERIFICADO CORRECTAMENTE");
+
+        // 3. OBTENER POSICIONES OCUPADAS DEL DESTINATARIO
+        // EXCLUIMOS EL ITEM QUE ESTAMOS MOVIENDO
+        const posicionesOcupadas = await clientDb.query(
+            `
+            SELECT posicion
+            FROM items
+            WHERE idpersonaje = $1
+              AND contenedor = 'INVENTARIO'
+              AND posicion IS NOT NULL
+              AND id <> $2
+            FOR UPDATE
+            `,
+            [idpersonajeDestino, iditem]
+        );
+
+        console.log("POSICIONES OCUPADAS:", posicionesOcupadas.rows);
+
+        // 4. OBTENER POSICIONES
+        const ocupadas = posicionesOcupadas.rows.map(
+            item => Number(item.posicion)
+        );
+
+        // 5. BUSCAR LA PRIMERA POSICIÓN LIBRE ENTRE 0 Y 29
+        let posicionLibre = -1;
+
+        for (let i = 0; i < 30; i++) {
+
+            if (!ocupadas.includes(i)) {
+                posicionLibre = i;
+                break;
+            }
+
+        }
+
+        console.log("POSICION LIBRE:", posicionLibre);
+
+        // 6. VERIFICAR ESPACIO
+        if (posicionLibre === -1) {
+            await clientDb.query('ROLLBACK');
+
+            return res.status(400).json({
+                resultado: "ERROR",
+                paso: "VERIFICAR INVENTARIO",
+                error: "El inventario del personaje destinatario está lleno"
+            });
+        }
+
+        // 7. TRANSFERIR ITEM
+        const transferencia = await clientDb.query(
+            `
+            UPDATE items
+            SET idpersonaje = $1,
+                posicion = $2,
+                contenedor = 'INVENTARIO'
+            WHERE id = $3
+            RETURNING id, idpersonaje, posicion, contenedor
+            `,
+            [
+                idpersonajeDestino,
+                posicionLibre,
+                iditem
+            ]
+        );
+
+        console.log("RESULTADO UPDATE:", transferencia.rows);
+
+        await clientDb.query('COMMIT');
+
+        console.log("TRANSACCION CONFIRMADA");
+        console.log("TRANSFERENCIA EXITOSA");
+
+        return res.status(200).json({
+            resultado: "OK",
+            paso: "TRANSFERENCIA COMPLETADA",
+            message: "Item transferido correctamente",
+            iditem: iditem,
+            idpersonajeOrigen: idpersonajeOrigen,
+            idpersonajeDestino: idpersonajeDestino,
+            posicionAsignada: posicionLibre,
+            itemActualizado: transferencia.rows[0]
+        });
+
+    } catch (error) {
+
+        await clientDb.query('ROLLBACK');
+
+        console.error("ERROR AL TRANSFERIR ITEM:", error);
+
+        return res.status(500).json({
+            resultado: "ERROR",
+            paso: "ERROR INTERNO",
+            error: error.message
+        });
+
+    } finally {
+
+        clientDb.release();
+/*
+        console.log("CONEXION LIBERADA");
+        console.log("====================================");
+  */
+        }
+
+});
+
 //****************************************************************************** */
 
 
