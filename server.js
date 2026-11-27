@@ -401,11 +401,10 @@ app.post('/insert-usuario', async (req, res) => {
   }
 });
 
-//login 
+
+// LOGIN
 app.post('/loginUsuario', async (req, res) => {
   const { email, contrasenia } = req.body;
-  
-  //console.log("",req.body)
 
   try {
     const userQuery = 'SELECT * FROM usuarios WHERE email = $1';
@@ -413,27 +412,35 @@ app.post('/loginUsuario', async (req, res) => {
 
     if (userResult.rows.length === 0) {
       console.log("No se encontró el usuario con el email proporcionado.");
-      return res.status(401).json({ message: 'Email o contraseña incorrectos' });
+      return res.status(401).json({
+        message: 'Email o contraseña incorrectos'
+      });
     }
- 
+
     const user = userResult.rows[0];
-    const idusuario = userResult.rows[0].idusuario;
-    const estatus = userResult.rows[0].estatus;
+    const idusuario = user.idusuario;
+    const estatus = user.estatus;
 
     if (user.contrasenia !== contrasenia) {
-      return res.status(401).json({ message: 'Email o contraseña incorrectos' });
+      return res.status(401).json({
+        message: 'Email o contraseña incorrectos'
+      });
     }
+
     res.json({
       message: 'Inicio de sesión exitoso',
-      //personajes: personajesResult.rows, 
       idusuario: idusuario,
       estatus: estatus,
-      user:user,
+      imagenurl: user.imagenurl || "",
+      imagencloudid: user.imagencloudid || "",
+      user: user,
     });
 
   } catch (error) {
     console.error('Error en el inicio de sesión:', error);
-    res.status(500).json({ message: 'Error en el servidor' });
+    res.status(500).json({
+      message: 'Error en el servidor'
+    });
   }
 });
 
@@ -1861,6 +1868,7 @@ app.put('/personajes/:idpersonaje/notasaga', async (req, res) => {
 });
 
 
+
 // UPDATE USUARIOS
 app.put('/updateUsuarios/:usuarioId', async (req, res) => {
 
@@ -1931,7 +1939,7 @@ app.put('/updateUsuarios/:usuarioId', async (req, res) => {
 
             updateQuery += `,
                 imagenurl = $${paramIndex},
-                imagenfileid = $${paramIndex + 1}
+                imagencloudid = $${paramIndex + 1}
             `;
 
             values.push(imagenUrlFinal, imagenFileIdFinal);
@@ -1964,7 +1972,7 @@ app.put('/updateUsuarios/:usuarioId', async (req, res) => {
             email: usuarioActualizado.email,
             contrasenia: usuarioActualizado.contrasenia,
             imagenurl: usuarioActualizado.imagenurl || "",
-            imagenfileid: usuarioActualizado.imagenfileid || ""
+            imagencloudid: usuarioActualizado.imagencloudid || ""
         });
 
     } catch (error) {
@@ -1976,6 +1984,7 @@ app.put('/updateUsuarios/:usuarioId', async (req, res) => {
         });
     }
 });
+
 
 
 
