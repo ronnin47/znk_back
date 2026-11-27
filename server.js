@@ -108,6 +108,7 @@ function normalizarMensaje(mensaje) {
     puntajeKen:mensaje.puntajeKen?.toString() ?? '',
     nombreItem: mensaje.nombreItem?.toString() ?? '',
     idItem: mensaje.idItem ?? 0,
+    imagenItemUrl: mensaje.imagenItemUrl?.toString() ?? '',
     idpersonajeDestino: mensaje.idpersonajeDestino?.toString() ?? '',
   };
 }
